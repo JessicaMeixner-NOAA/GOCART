@@ -10334,7 +10334,7 @@ loop2: DO l = 1,nspecies_HL
       real :: s
       s =0
       call random_number(x)
-      do i = 1, 150000*jm
+      do i = 1, 1500*jm
          x = exp(x /maxval(x))
          s = s + sum(x)
       end do

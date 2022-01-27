@@ -2896,6 +2896,9 @@ CONTAINS
 
     rc = __SUCCESS__
 
+    print *, __FILE__, __LINE__, 'AERO', shape(aero)
+    print *, __FILE__, __LINE__, 'EMISSION', shape(emissions)
+    print *, __FILE__, __LINE__, 'DELP', shape(delp)
     do n = 1, nbins
        emissions(:,:,km,n) = emissions_surface(:,:,n) * sfrac(n)
        if (nPts > 0) then
@@ -10082,7 +10085,7 @@ loop2: DO l = 1,nspecies_HL
 !==================================================================================
 
    subroutine ReadPointEmissions( nymd, filename, nPts, vLat, vLon, vBase, vTop, vEmis, vStart, vEnd, unusable, label, rc)
-      use MAPL_Profiler
+      !use MAPL_Profiler
       integer, intent(in)            :: nymd
       character(*), intent(in) :: filename
       integer, intent(out)           :: nPts
@@ -10107,13 +10110,13 @@ loop2: DO l = 1,nspecies_HL
       end if
 
       reader = EmissionReader()
-      call start_global_time_profiler('ReadPointEmissions()')
+      !call start_global_time_profiler('ReadPointEmissions()')
       !$omp critical (process1)
       call reader%open(filename,rc=status1)
       table = reader%read_table(label=label_, rc=status2)
       call reader%close(rc=status3)
       !$omp end critical (process1)
-      call stop_global_time_profiler('ReadPointEmissions()')
+      !call stop_global_time_profiler('ReadPointEmissions()')
       __VERIFY__(status1)
       __VERIFY__(status2)
       __VERIFY__(status3)

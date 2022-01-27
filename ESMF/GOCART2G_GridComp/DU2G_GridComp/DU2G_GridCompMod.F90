@@ -660,7 +660,7 @@ contains
 
 ! !INTERFACE:
   subroutine Run1 (GC, import, export, clock, RC)
-     use MAPL_Profiler
+     !use MAPL_Profiler
 !   !ARGUMENTS:
     type (ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
     type (ESMF_State),    intent(inout) :: import ! Import state
@@ -710,7 +710,7 @@ contains
 !   Begin... 
 
 
-    call start_global_time_profiler('preamble')
+    !call start_global_time_profiler('preamble')
 !   Get my name and set-up traceback handle
 !   ---------------------------------------
     call ESMF_GridCompGet (GC, NAME=COMP_NAME, __RC__)
@@ -732,9 +732,9 @@ contains
 !   -----------------------------------
     call MAPL_Get (mapl, INTERNAL_ESMF_STATE=internal, __RC__)
 
-    call start_global_time_profiler('GetPointer')
+    !call start_global_time_profiler('GetPointer')
 #include "DU2G_GetPointer___.h"
-    call stop_global_time_profiler('GetPointer')
+    !call stop_global_time_profiler('GetPointer')
 
 !   Set du_src to 0 where undefined
 !   --------------------------------
@@ -761,8 +761,8 @@ contains
     allocate(emissions_surface(i2,j2,self%nbins), __STAT__)
     emissions_surface = 0.0
 
-    call stop_global_time_profiler('preamble')
-    call start_global_time_profiler('emissions')
+    !call stop_global_time_profiler('preamble')
+    !call start_global_time_profiler('emissions')
 !   Get surface gridded emissions
 !   -----------------------------
     select case(self%emisFlag)
@@ -807,9 +807,9 @@ contains
                                  self%Ch_DU, du_src, MAPL_GRAV, &
                                  emissions_surface, __RC__)
     end select !select case(self%emisFlag)
-    call stop_global_time_profiler('emissions')
+    !call stop_global_time_profiler('emissions')
 
-    call start_global_time_profiler('point emissions')
+    !call start_global_time_profiler('point emissions')
 
 !   Read point emissions file once per day
 !   --------------------------------------
@@ -855,9 +855,9 @@ contains
                                        workspace%pStart, workspace%pEnd, zle, &
                                        area, iPoint, jPoint, nhms, emissions_point, __RC__)
     end if
-    call stop_global_time_profiler('point emissions')
+    !call stop_global_time_profiler('point emissions')
 
-    call start_global_time_profiler('update state')
+    !call start_global_time_profiler('update state')
 
 !   Update aerosol state
 !   --------------------
@@ -865,7 +865,7 @@ contains
                              self%sfrac, workspace%nPts, self%km, self%CDT, MAPL_GRAV, &
                              self%nbins, delp, DU, __RC__)
 
-    call stop_global_time_profiler('update state')
+    !call stop_global_time_profiler('update state')
     if (associated(DUEM)) then
        DUEM = sum(emissions, dim=3)
     end if

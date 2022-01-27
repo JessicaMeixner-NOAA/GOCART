@@ -13,7 +13,7 @@ module GOCART2G_GridCompMod
 
    use ESMF
    use MAPL
-   use MAPL_Profiler
+   !use MAPL_Profiler
    use Chem_AeroGeneric
 
 ! !Establish the Childen's SetServices
@@ -503,53 +503,67 @@ contains
    character(len=ESMF_MAXSTR) :: Iam = "Run1" 
    type(ESMF_VM) :: vm
    type(ESMF_GridComp) :: thread_gc
-   integer :: i
+   integer :: i, me
 
-   call start_global_time_profiler('run1()')
+   !call start_global_time_profiler('run1()')
    call ESMF_UserCompGetInternalState (GC, 'GOCART_State', wrap, status)
    VERIFY_(status)
    self => wrap%ptr
 
+   call ESMF_GridCompGet (GC, vm=vm, __RC__)
+   call ESMF_VMGet(vm, localPet=me, __RC__)
+
+   print *, __FILE__, __LINE__, self%use_threads, me
    if(self%use_threads) then
       call MAPL_GetObjectFromGC (GC, MAPL, __RC__)
+      print *, __FILE__, __LINE__, MAPL%is_threading_active(), me
       if(MAPL%is_threading_active()) then
          call run_thread(GC, import, export, clock, __RC__)
       else
-         call start_global_time_profiler('activate_threads')
+         !call start_global_time_profiler('activate_threads')
          num_threads = 1
          !$ num_threads = omp_get_max_threads()
+         print *, __FILE__, __LINE__, num_threads, omp_get_num_threads(), me
          call MAPL%activate_threading(num_threads, __RC__)
-         call stop_global_time_profiler('activate_threads')
-         call start_global_time_profiler('parallel')
+         !call stop_global_time_profiler('activate_threads')
+         !call start_global_time_profiler('parallel')
+         print *, __FILE__, __LINE__, num_threads, omp_get_num_threads(), me
 
          allocate(statuses(num_threads), __STAT__)
          statuses=0
+         print *, __FILE__, __LINE__, num_threads, omp_get_num_threads(), me
+         !call ESMF_FINALIZE(rc=status)
+         !stop
          !$omp parallel default(none), &
          !$omp& private(thread, subimport, subexport, thread_gc), &
-         !$omp& shared(gc, statuses, clock, MAPL)
+         !$omp& shared(gc, statuses, clock, MAPL, vm, num_threads, me)
 
          thread = 0
          !$ thread = omp_get_thread_num() 
+         !if(me==0) print *, __FILE__, __LINE__, thread
 
          subimport = MAPL%get_import_state()
          subexport = MAPL%get_export_state()
          thread_gc = MAPL%get_gridcomp()
-         call run_thread(thread_gc, subimport, subexport, clock, rc=statuses(thread+1))
+         print *, __FILE__, __LINE__, num_threads, thread, me
+         call ESMF_VMBarrier(vm)
 
+         call run_thread(thread_gc, subimport, subexport, clock, rc=statuses(thread+1))
          !$omp end parallel
-         call stop_global_time_profiler('parallel')
+         !call stop_global_time_profiler('parallel')
 
          if (any(statuses /= ESMF_SUCCESS)) then
             _FAIL('some thread failed')
          end if
-         call start_global_time_profiler('deactivate_threads')
+         !deallocate(statuses, __STAT__)
+         !call start_global_time_profiler('deactivate_threads')
          call MAPL%deactivate_threading(__RC__)
-         call stop_global_time_profiler('deactivate_threads')
+         !call stop_global_time_profiler('deactivate_threads')
       end if
    else
       call run_thread(GC, import, export, clock, __RC__)
    end if
-   call stop_global_time_profiler('run1()')
+   !call stop_global_time_profiler('run1()')
    RETURN_(ESMF_SUCCESS)
  end subroutine Run1
  
@@ -587,6 +601,8 @@ contains
     integer :: status, userstatus
     character(len=255) :: Iam
     character(len=ESMF_MAXSTR), pointer :: GCNames(:)
+    type (ESMF_VM) :: vm
+    integer :: me
     
 !****************************************************************************
 ! Begin... 
@@ -596,7 +612,11 @@ contains
 !   Get my name and set-up traceback handle
 !   ---------------------------------------
     call ESMF_GridCompGet( GC, NAME=COMP_NAME, __RC__ )
+    call ESMF_VMGetGlobal( vm, __RC__ )
     Iam = trim(COMP_NAME)//'::'//'run_thread'
+    call ESMF_VMGet(vm, localPet=me)
+    print *, __FILE__, __LINE__, me, omp_get_thread_num()
+    !call ESMF_VMBarrier(vm)
 
 !   Get my internal MAPL_Generic state
 !   -----------------------------------
@@ -609,16 +629,18 @@ contains
 
 !   Run the children
 !   -----------------
-    call start_global_time_profiler('loop children')
+    !call start_global_time_profiler('loop children')
     do i = 1, size(gcs)
-       call start_global_time_profiler(trim(gcNames(i)))
+       !call start_global_time_profiler(trim(gcNames(i)))
        call ESMF_GridCompRun (gcs(i), importState=gim(i), exportState=gex(i), &
             phase=1, clock=clock, userrc=userstatus,rc=status)
-       call stop_global_time_profiler(trim(gcNames(i)))
+       !call stop_global_time_profiler(trim(gcNames(i)))
        VERIFY_(userstatus)
        VERIFY_(status)
     end do
-    call stop_global_time_profiler('loop children')
+    print *, __FILE__, __LINE__, me, omp_get_thread_num()
+    call ESMF_VMBarrier(vm)
+    !call stop_global_time_profiler('loop children')
 
     RETURN_(ESMF_SUCCESS)
 
@@ -631,7 +653,7 @@ contains
 ! !INTERFACE:
 
   subroutine Run2 (GC, import, export, clock, RC)
-     use MAPL_Profiler
+     !use MAPL_Profiler
 ! !ARGUMENTS:
     type (ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
     type (ESMF_State),    intent(inout) :: import ! Import state
@@ -693,7 +715,7 @@ contains
 
     __Iam__('Run2')
 
-   call start_global_time_profiler('run2()')
+   !call start_global_time_profiler('run2()')
 !****************************************************************************
 ! Begin... 
 
@@ -1029,7 +1051,7 @@ contains
        totangstr = log(tau1/tau2)/c3
     end if
 
-   call stop_global_time_profiler('run2()')
+   !call stop_global_time_profiler('run2()')
 
     RETURN_(ESMF_SUCCESS)
 
